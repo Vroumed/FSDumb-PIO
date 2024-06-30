@@ -283,11 +283,6 @@ void Screen_Display_Selector(const String text[], int arraySize, int selector) {
 }
 
 
-void buildMainScreen() {
-  
-}
-
-
 void testdrawstyles(void) {
   display.clearDisplay();
 
