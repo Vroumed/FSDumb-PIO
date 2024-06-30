@@ -18,7 +18,6 @@ struct WiFiCredentials {
 // Define a constant array of WiFiCredentials
 const WiFiCredentials knownNetworks[] = {
     {"SFR_D8E0", "panige10"},
-    {"SFR_D8E0_5GHZ", "panige10"},
     {"iPhone de Fumy", "Truc.EXE"}
 };
 
@@ -74,6 +73,16 @@ void WiFi_Setup(bool WiFi_Mode)
           Screen_Display_Text("no known network found\npress OK to retry");
           while (!AwaitForIRInput() == 16) {
               delay(100);
+          }
+      }
+      if (size == 1) {
+        for (int j = 0; j < numKnownNetworks; j++) {
+            if (foundKnownSSIDs.front() == knownNetworks[j].ssid) {
+              ssid_Router = knownNetworks[j].ssid;
+              password_Router = knownNetworks[j].password;
+              selectedwifi = true;
+              break;
+            }
           }
       }
       else {
