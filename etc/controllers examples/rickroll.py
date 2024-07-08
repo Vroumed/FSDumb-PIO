@@ -3,9 +3,14 @@ import pretty_midi
 import websocket
 import json
 
-uri = "ws://192.168.1.22/ws"
-ws = websocket.WebSocket()
-ws.connect(uri)
+ws = None
+
+if __name__ == "__main__":
+    ws = websocket.WebSocket()
+    uri = "ws://192.168.137.116/ws"
+    ws.connect(uri)
+    main('rickroll.mid')
+
 
 def midi_to_frequency(note):
     """Convert MIDI note number to frequency."""
@@ -61,5 +66,4 @@ def main(file_path, playback_speed = 1.0):
         
         previous_end_time = end_time
 
-if __name__ == "__main__":
-    main('rickroll.mid')
+

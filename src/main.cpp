@@ -7,6 +7,7 @@
 #include "Networking/WebsocketHandler.h"
 #include "Buzzer/Buzzer.h"
 #include "IR/IRReceiver.h"
+#include "Networking/HttpEndpoint.h"
 
 void setup()
 {
@@ -33,6 +34,7 @@ void setup()
 
 	WiFi_Setup(0);
 	initWebSocket();
+	HTTPServer_setup();
 	server.begin();
 }
 

@@ -254,13 +254,16 @@ void Commit() {
   display.display();
 }
 
-void Screen_Display_Text(const char* text) {
-  Clear();
+void Screen_Display_Text(const char* text, bool clearAndCommit = true) {
+  if (clearAndCommit)
+    Clear();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
   display.println(text);
-  Commit();
+
+  if (clearAndCommit)
+    Commit();
 }
 
 void Screen_Display_Selector(const String text[], int arraySize, int selector) {

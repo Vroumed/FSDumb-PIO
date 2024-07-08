@@ -18,7 +18,7 @@ void testdrawrect();
 void testfillrect();
 void testdrawcircle();
 void testfillcircle();
-void Screen_Display_Text(const char* text);
+void Screen_Display_Text(const char* text, bool clearAndCommit = true);
 void Screen_Display_Selector(const String text[], int arraySize, int selector);
 void Commit();
 void Clear();

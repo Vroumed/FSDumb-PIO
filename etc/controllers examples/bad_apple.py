@@ -4,19 +4,17 @@ import numpy as np
 import asyncio
 import websocket
 import json
-import awa
+import rickroll
 import time
 
 # Configuration WebSocket
-WS_URL = "ws://192.168.1.22/ws"  # Remplacez par l'adresse IP et le port de votre rover
-
 # Configuration de la matrice LED
 LED_MATRIX_WIDTH = 16
 LED_MATRIX_HEIGHT = 8
 
-uri = "ws://192.168.1.22/ws"
-ws = websocket.WebSocket()
-ws.connect(uri)
+uri = "ws://192.168.137.116/ws"
+rickroll.ws = websocket.WebSocket()
+rickroll.ws.connect(uri)
 
 def image_to_led_matrices(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -48,7 +46,7 @@ def send_frame(websocket, matrix_left, matrix_right):
             "matrixRight": matrix_right
         }
     }
-    ws.send(json.dumps(data))
+    rickroll.ws.send(json.dumps(data))
 
 # Lecture de la vidéo et envoi des images
 def stream_video(video_path):
@@ -74,7 +72,7 @@ def stream_video(video_path):
 video_path = "bad.mp4"  # Remplacez par le chemin de votre vidéo
 
 video_thread = threading.Thread(target=lambda: stream_video(video_path))
-midi_thread = threading.Thread(target=lambda: awa.main("bad_apple.mid", 1.3))
+midi_thread = threading.Thread(target=lambda: rickroll.main("bad_apple.mid", 1.3))
 
 
 
