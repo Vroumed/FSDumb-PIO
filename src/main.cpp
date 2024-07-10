@@ -8,6 +8,7 @@
 #include "Buzzer/Buzzer.h"
 #include "IR/IRReceiver.h"
 #include "Networking/HttpEndpoint.h"
+#include "Networking/CameraHandler.h"
 
 void setup()
 {
@@ -31,6 +32,8 @@ void setup()
 	Screen_Display_Text("Starting up...");
 
 	IRSetup();
+
+	cameraSetup();
 
 	WiFi_Setup(0);
 	initWebSocket();

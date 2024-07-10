@@ -16,8 +16,7 @@ is_running = True
 # create an instance, use fiŕst available device
 controller = DualSenseController()
 
-
-uri = "ws://192.168.137.32/ws"
+uri = "ws://172.20.10.4/ws"
 ws = websocket.WebSocket()
 ws.connect(uri)
 

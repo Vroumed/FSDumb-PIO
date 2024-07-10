@@ -12,7 +12,7 @@ import time
 LED_MATRIX_WIDTH = 16
 LED_MATRIX_HEIGHT = 8
 
-uri = "ws://192.168.137.116/ws"
+uri = "ws://192.168.137.45/ws"
 rickroll.ws = websocket.WebSocket()
 rickroll.ws.connect(uri)
 

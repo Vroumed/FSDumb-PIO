@@ -18,6 +18,7 @@
 #define PCLK_GPIO_NUM    22
 
 
+
 ///////////////////Camera drive area///////////////////////////////////
 framesize_t frame_size   =   FRAMESIZE_CIF;      //The default is to use the image size of FRAMESIZE CIF
 //Camera initialization
@@ -67,4 +68,6 @@ void camera_hmirror(bool enable)
   sensor_t * s = esp_camera_sensor_get();
   s->set_hmirror(s, enable);
 }
+
+
 

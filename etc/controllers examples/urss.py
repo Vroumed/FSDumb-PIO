@@ -7,7 +7,7 @@ import rickroll
 import json
 import websocket
 
-uri = "ws://192.168.137.75/ws"
+uri = "ws://192.168.157.137/ws"
 rickroll.ws = websocket.WebSocket()
 rickroll.ws.connect(uri)
 

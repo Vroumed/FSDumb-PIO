@@ -22,6 +22,8 @@ const WiFiCredentials knownNetworks[] = {
     {"iPhone de Fumy", "Truc.EXE"},
     {"PANINIPC", "Truc.EXE"},
     {"BENS-OMEN", "hehehehe"},
+    {"iPhone de Fumy", "Truc.EXE"},
+
 };
 
 const int numKnownNetworks = sizeof(knownNetworks) / sizeof(WiFiCredentials);
@@ -77,6 +79,7 @@ void WiFi_Setup(bool WiFi_Mode)
           while (!AwaitForIRInput() == 16) {
               delay(100);
           }
+          ESP.restart();
       }
       if (size == 1) {
         for (int j = 0; j < numKnownNetworks; j++) {
@@ -170,13 +173,22 @@ void WiFi_Setup(bool WiFi_Mode)
     
     Clear();
 
+    for (uint8_t x = 0; x < (qrcode.size*2) + 4; x++) {
+      display.writePixel(basX-2 + x, basY-1, SSD1306_WHITE);
+      display.writePixel(basX-2 + x, basY + qrcode.size, SSD1306_WHITE);
+    }
     for (uint8_t y = 0; y < qrcode.size; y++) {
       // Each horizontal module
+      
+      display.writePixel(basX - 2, basY + y, SSD1306_WHITE);
+      display.writePixel(basX - 1, basY + y, SSD1306_WHITE);
       for (uint8_t x = 0; x < qrcode.size; x++) {
           Serial.print(qrcode_getModule(&qrcode, x, y) ? "\u2588\u2588": "  ");
-          display.writePixel(basX + x*2, basY + y, qrcode_getModule(&qrcode, x, y) ?  SSD1306_WHITE : SSD1306_BLACK);
-          display.writePixel(basX + x*2 + 1, basY + y, qrcode_getModule(&qrcode, x, y) ?  SSD1306_WHITE : SSD1306_BLACK);
+          display.writePixel(basX + x*2, basY + y, qrcode_getModule(&qrcode, x, y) ?  SSD1306_BLACK : SSD1306_WHITE);
+          display.writePixel(basX + x*2 + 1, basY + y, qrcode_getModule(&qrcode, x, y) ?  SSD1306_BLACK : SSD1306_WHITE);
       }
+      display.writePixel(basX + qrcode.size*2 + 2, basY + y, SSD1306_WHITE);
+      display.writePixel(basX + qrcode.size*2 + 1, basY + y, SSD1306_WHITE);
     }
 
     Commit();
