@@ -32,15 +32,6 @@ void loopTask_Camera(void *pvParameters)
                         sprintf(size_buf, "%d\r\n\r\n", fb->len);
                         wf_client.write(size_buf);
                         wf_client.write(fb->buf, fb->len);
-
-                        // uint8_t slen[4];
-                        // slen[0] = fb->len >> 0;
-                        // slen[1] = fb->len >> 8;
-                        // slen[2] = fb->len >> 16;
-                        // slen[3] = fb->len >> 24;
-                        // wf_client.write(slen, 4);
-                        // wf_client.write(fb->buf, fb->len);
-                        // Serial.println("Camera send");
                         esp_camera_fb_return(fb);
                     }
                     
@@ -54,12 +45,25 @@ void loopTask_Camera(void *pvParameters)
     }
 }
 
+char * strtoupper( char * dest, const char * src ) {
+    char * result = dest;
+    while( *dest++ = toupper( *src++ ) );
+    return result;
+}
+
 void HTTPServer_setup() {
     server.on("/wrover", HTTP_GET, [] (AsyncWebServerRequest *request) {
         // Create a JSON object
         JsonDocument jsonDoc;
         jsonDoc["name"] = ROVER_NAME;
-        jsonDoc["ready"] = true;
+        if (hardwareID == "") {
+            String macAddress = "ESP32-" + String(ESP.getEfuseMac(), HEX);
+            char hardwareID[macAddress.length() + 1];
+            macAddress.toCharArray(hardwareID, macAddress.length() + 1);
+            strtoupper(hardwareID, hardwareID);
+        }
+        jsonDoc["id"] = hardwareID;
+        jsonDoc["ready"] = !clientConnected && !gatewayConnected;
         
         // Serialize JSON object to a string
         String response;
@@ -70,18 +74,17 @@ void HTTPServer_setup() {
     });
 
     server.on("/camera", HTTP_GET, [] (AsyncWebServerRequest *request) {
-        
+        //take a fixed screenshot
         camera_fb_t *pic = esp_camera_fb_get();
         if (!pic) {
             request->send(500, "text/plain", "Failed to capture image");
+            LogErrorToTerminals("Failed to capture image");
             return;
         }
         AsyncResponseStream *response = request->beginResponseStream("image/jpeg");
         response->write(pic->buf, pic->len);
         esp_camera_fb_return(pic);
         request->send(response);
-
-        
     });
 
     xTaskCreateUniversal(loopTask_Camera, "loopTask_Camera", 8192, NULL, 0, NULL, 0);

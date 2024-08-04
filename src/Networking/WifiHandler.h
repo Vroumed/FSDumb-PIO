@@ -6,7 +6,7 @@
 
 extern const char* ssid_Router;
 extern const char* password_Router;
-extern char* api_key;
+extern std::string api_key;
 extern bool WiFi_MODE;
 
 extern IPAddress local_IP;
@@ -15,5 +15,6 @@ extern int wtdFlag;
 
 void WiFi_Setup(bool WiFi_Mode);
 void loopTask_WTD(void *pvParameters);
+void generateQRCode();
 
 #endif // WIFISTUP_H

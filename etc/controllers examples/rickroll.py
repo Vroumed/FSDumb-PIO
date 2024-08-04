@@ -4,12 +4,8 @@ import websocket
 import json
 
 ws = None
+api_key = None
 
-if __name__ == "__main__":
-    ws = websocket.WebSocket()
-    uri = "ws://192.168.137.116/ws"
-    ws.connect(uri)
-    main('rickroll.mid')
 
 
 def midi_to_frequency(note):
@@ -67,3 +63,8 @@ def main(file_path, playback_speed = 1.0):
         previous_end_time = end_time
 
 
+if __name__ == "__main__":
+    ws = websocket.WebSocket()
+    uri = "ws://192.168.137.116/ws"
+    ws.connect(uri)
+    main('rickroll.mid')

@@ -5,16 +5,113 @@
 #include <Buzzer/Buzzer.h>
 #include <cmath>
 #include <Car_Emotion.h>
+#include <Esp.h>
+#include "WifiHandler.h"
+#include <Display/Screen.h>
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws"); // Changez le nom de ce point d'accès pour "sécuriser" l'accès à votre voiture
+
+std::string hardwareID = "";
+bool clientConnected = false;
+AsyncWebSocketClient *clientCon;
+bool gatewayConnected = false;
+AsyncWebSocketClient *gatewayCon;
+
+bool autoMode = false;
 
 float mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+void LogErrorToTerminals(const char* message, const char* header = "Error") {
+    Serial.println(header + ':');
+    Serial.println(message);
+    Buzzer_Variable(true);
+    if (ws.availableForWriteAll()) {
+        JsonDocument jsonDoc;
+        jsonDoc["type"] = 0;
+        jsonDoc["message"] = message;
+        jsonDoc["header"] = header;
+        String response;
+        serializeJson(jsonDoc, response);
+        ws.textAll(message);
+    }
+    delay(100);
+    Buzzer_Variable(false);
+}
 
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
+void handleUnauthenticatedSocketMessage(void *arg, uint8_t *data, size_t len, AsyncWebSocketClient *client) {
+    AwsFrameInfo *info = (AwsFrameInfo *)arg;
+
+    if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
+    {
+        data[len] = 0;
+
+        JsonDocument doc;
+
+        // JSON input string.
+        const char* json = (char *)data;
+
+        // Deserialize the JSON document
+        DeserializationError error = deserializeJson(doc, json);
+
+        if (error)
+        {
+            LogErrorToTerminals(error.c_str(), "deserializeJson() failed");
+            return;
+        }
+
+        int type = doc["type"];
+        if (type == 0) { // client
+            if (clientConnected) {
+                client->text("no:occupied");
+                return;
+            }
+
+            std::string apiKey = doc["apiKey"];
+            if (strcmp(apiKey.c_str(), api_key.c_str()) != 0) {
+                clientCon = client;
+                client->text("ok");
+                WS2812_Set_Color(client_indicator, 0, 255, 0);
+                WS2812_Commit();
+                clientConnected = true;
+                Screen_Display_Text("Client connected");
+            }
+            else {
+                client->text("no:unauthorized");
+            }
+            return;
+        }
+        else if (type == 1) { // gateway
+            if (!clientConnected) {
+                client->text("no:client"); // Client must be connected first, then indicate the gateway to connect
+                return;
+            }
+
+            if (gatewayConnected) {
+                client->text("no:occupied");
+                return;
+            }
+
+            std::string apiKey = doc["data"]["apiKey"];
+            if (apiKey == api_key) {
+                gatewayCon = client;
+                client->text("ok");
+                WS2812_Set_Color(server_indicator, 0, 255, 0);
+                WS2812_Commit();
+                gatewayConnected = true;
+                Screen_Display_Text("Client & Gateway connected");
+            }
+            else {
+                client->text("no:unauthorized");
+            }
+            return;
+        }
+    }
+}
+
+void handleClientSocketMessage(void *arg, uint8_t *data, size_t len)
 {
     AwsFrameInfo *info = (AwsFrameInfo *)arg;
 
@@ -34,8 +131,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 
         if (error)
         {
-            Serial.print("deserializeJson() failed: ");
-            Serial.println(error.c_str());
+            LogErrorToTerminals(error.c_str(), "deserializeJson() failed");
             return;
         }
 
@@ -123,6 +219,40 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     }
 }
 
+void handleGatewaySocketMessage(void *arg, uint8_t *data, size_t len) {
+     AwsFrameInfo *info = (AwsFrameInfo *)arg;
+
+    if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
+    {
+        data[len] = 0;
+
+        JsonDocument doc;
+
+        // JSON input string.
+        const char* json = (char *)data;
+
+        // Deserialize the JSON document
+        DeserializationError error = deserializeJson(doc, json);
+
+        if (error)
+        {
+            LogErrorToTerminals(error.c_str(), "deserializeJson() failed");
+            return;
+        }
+
+        bool autoCommand = doc["impersonate_client"] == 1;
+        if (autoCommand) {
+            if (autoMode) {
+                handleClientSocketMessage(arg, data, len);
+            }
+            else {
+                LogErrorToTerminals("Gateway is impersonating client, but auto mode is disabled");
+            }
+        }
+    }
+}
+
+
 
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
@@ -132,10 +262,32 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
         Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
         break;
     case WS_EVT_DISCONNECT:
-        Serial.printf("WebSocket client #%u disconnected\n", client->id());
+        if (client == clientCon && clientConnected) {
+            clientConnected = false;
+            WS2812_Set_Color(client_indicator, 0, 0, 0);
+            WS2812_Commit();
+            server->closeAll(); // Kick all connected clients, client must be initiator   
+            generateQRCode();  //Since the client is disconnected, we can generate a new QR code      
+        }
+        else if (client == gatewayCon && gatewayConnected) {
+            gatewayConnected = false;
+            WS2812_Set_Color(server_indicator, 255, 128, 0);
+            WS2812_Commit();
+        }
         break;
     case WS_EVT_DATA:
-        handleWebSocketMessage(arg, data, len);
+        if (client == clientCon && clientConnected)
+            {
+                handleClientSocketMessage(arg, data, len);
+            }
+        else if (client == gatewayCon && gatewayConnected)
+            {
+                handleGatewaySocketMessage(arg, data, len);
+            }
+        else 
+            {
+                handleUnauthenticatedSocketMessage(arg, data, len, client);
+            }
         break;
     case WS_EVT_PONG:
     case WS_EVT_ERROR:

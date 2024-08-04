@@ -29,7 +29,7 @@ const WiFiCredentials knownNetworks[] = {
 const int numKnownNetworks = sizeof(knownNetworks) / sizeof(WiFiCredentials);
 
 
-IPAddress local_IP(192, 168, 4, 1);
+IPAddress local_IP;
 bool ledOn = false;
 
 std::string random_string(std::size_t length)
@@ -49,6 +49,46 @@ std::string random_string(std::size_t length)
 
     return random_string;
 }
+
+void generateQRCode() {
+
+    std::string qrData = std::string(local_IP.toString().c_str()) + ';' + api_key;
+    QRCode qrcode;
+    uint8_t qrcodeData[qrcode_getBufferSize(3)];
+    qrcode_initText(&qrcode, qrcodeData, 3, 0, qrData.c_str());
+
+    // Dimensions de l'écran
+    const uint8_t screenWidth = 128;
+    const uint8_t screenHeight = 32;
+
+    // Calcul des coordonnées de base pour centrer le QR code
+    uint8_t basX = (screenWidth - qrcode.size * 2) / 2;
+    uint8_t basY = (screenHeight - qrcode.size) / 2;
+
+    
+    Clear();
+
+    for (uint8_t x = 0; x < (qrcode.size*2) + 4; x++) {
+      display.writePixel(basX-2 + x, basY-1, SSD1306_WHITE);
+      display.writePixel(basX-2 + x, basY + qrcode.size, SSD1306_WHITE);
+    }
+    for (uint8_t y = 0; y < qrcode.size; y++) {
+      // Each horizontal module
+      
+      display.writePixel(basX - 2, basY + y, SSD1306_WHITE);
+      display.writePixel(basX - 1, basY + y, SSD1306_WHITE);
+      for (uint8_t x = 0; x < qrcode.size; x++) {
+          Serial.print(qrcode_getModule(&qrcode, x, y) ? "\u2588\u2588": "  ");
+          display.writePixel(basX + x*2, basY + y, qrcode_getModule(&qrcode, x, y) ?  SSD1306_BLACK : SSD1306_WHITE);
+          display.writePixel(basX + x*2 + 1, basY + y, qrcode_getModule(&qrcode, x, y) ?  SSD1306_BLACK : SSD1306_WHITE);
+      }
+      display.writePixel(basX + qrcode.size*2 + 2, basY + y, SSD1306_WHITE);
+      display.writePixel(basX + qrcode.size*2 + 1, basY + y, SSD1306_WHITE);
+    }
+
+    Commit();
+}
+
 
 //Initialize WiFi function
 void WiFi_Setup(bool WiFi_Mode)
@@ -146,55 +186,21 @@ void WiFi_Setup(bool WiFi_Mode)
       }
       delay(500);
     }
-    IPAddress local_ip = WiFi.localIP();
+    local_IP = WiFi.localIP();
 
     api_key = (char*)random_string(8).c_str();
 
-    std::string echo = std::string(local_ip.toString().c_str()) + '\n';
+    std::string echo = std::string(local_IP.toString().c_str()) + '\n';
 
     echo += api_key;
 
-    std::string qrData = std::string(local_ip.toString().c_str()) + ';' + api_key;
     Clear();
     Screen_Display_Text(echo.c_str());
-
-    QRCode qrcode;
-    uint8_t qrcodeData[qrcode_getBufferSize(3)];
-    qrcode_initText(&qrcode, qrcodeData, 3, 0, qrData.c_str());
-
-    // Dimensions de l'écran
-    const uint8_t screenWidth = 128;
-    const uint8_t screenHeight = 32;
-
-    // Calcul des coordonnées de base pour centrer le QR code
-    uint8_t basX = (screenWidth - qrcode.size * 2) / 2;
-    uint8_t basY = (screenHeight - qrcode.size) / 2;
-
-    
-    Clear();
-
-    for (uint8_t x = 0; x < (qrcode.size*2) + 4; x++) {
-      display.writePixel(basX-2 + x, basY-1, SSD1306_WHITE);
-      display.writePixel(basX-2 + x, basY + qrcode.size, SSD1306_WHITE);
-    }
-    for (uint8_t y = 0; y < qrcode.size; y++) {
-      // Each horizontal module
-      
-      display.writePixel(basX - 2, basY + y, SSD1306_WHITE);
-      display.writePixel(basX - 1, basY + y, SSD1306_WHITE);
-      for (uint8_t x = 0; x < qrcode.size; x++) {
-          Serial.print(qrcode_getModule(&qrcode, x, y) ? "\u2588\u2588": "  ");
-          display.writePixel(basX + x*2, basY + y, qrcode_getModule(&qrcode, x, y) ?  SSD1306_BLACK : SSD1306_WHITE);
-          display.writePixel(basX + x*2 + 1, basY + y, qrcode_getModule(&qrcode, x, y) ?  SSD1306_BLACK : SSD1306_WHITE);
-      }
-      display.writePixel(basX + qrcode.size*2 + 2, basY + y, SSD1306_WHITE);
-      display.writePixel(basX + qrcode.size*2 + 1, basY + y, SSD1306_WHITE);
-    }
-
-    Commit();
+    generateQRCode();
 
     WS2812_Set_Color(server_indicator, 255, 255, 0);
     WS2812_Commit();
 }
+
 
 

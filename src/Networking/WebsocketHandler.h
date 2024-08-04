@@ -9,9 +9,15 @@
 // Déclaration des objets serveur et WebSocket
 extern AsyncWebServer server;
 extern AsyncWebSocket ws;
+extern std::string hardwareID;
+extern IPAddress clientIP;
+extern bool clientConnected;
+extern IPAddress gatewayIP;
+extern bool gatewayConnected;
 
 // Déclarations des fonctions
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
+void handleClientSocketMessage(void *arg, uint8_t *data, size_t len);
+void LogErrorToTerminals(const char* message, const char* header = "Error");
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void initWebSocket();
 
