@@ -175,11 +175,13 @@ void WiFi_Setup(bool WiFi_Mode)
     while (WiFi.isConnected() != true) {
       if (ledOn) {
         WS2812_Set_Color(server_indicator, 0, 0, 0);
+        WS2812_Set_Color(client_indicator, 255, 128, 0);
         WS2812_Commit();
         ledOn = false;
         Screen_Display_Text("Connecting... [. ]");
       } else {
         WS2812_Set_Color(server_indicator, 255, 128, 0);
+        WS2812_Set_Color(client_indicator, 0, 0, 0);
         WS2812_Commit();
         ledOn = true;
         Screen_Display_Text("Connecting... [ .]");
@@ -196,10 +198,12 @@ void WiFi_Setup(bool WiFi_Mode)
 
     Clear();
     Screen_Display_Text(echo.c_str());
+    
+    WS2812_Set_Color(server_indicator, 255, 255, 0);
+    WS2812_Set_Color(client_indicator, 255, 255, 0);
+    WS2812_Commit();
     generateQRCode();
 
-    WS2812_Set_Color(server_indicator, 255, 255, 0);
-    WS2812_Commit();
 }
 
 

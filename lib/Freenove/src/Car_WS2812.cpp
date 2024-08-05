@@ -30,9 +30,9 @@ void WS2812_Fill(unsigned char color_1, unsigned char color_2, unsigned char col
 
 void WS2812_Set_Color(int number, unsigned char color_1, unsigned char color_2, unsigned char color_3)
 {
-  ws2812_strip_leds[number][0] = constrain(color_3, 0, 255);
+  ws2812_strip_leds[number][0] = constrain(color_2, 0, 255);
   ws2812_strip_leds[number][1] = constrain(color_1, 0, 255);
-  ws2812_strip_leds[number][2] = constrain(color_2, 0, 255);
+  ws2812_strip_leds[number][2] = constrain(color_3, 0, 255);
 }
 
 

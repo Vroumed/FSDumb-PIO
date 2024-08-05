@@ -56,14 +56,13 @@ void HTTPServer_setup() {
         // Create a JSON object
         JsonDocument jsonDoc;
         jsonDoc["name"] = ROVER_NAME;
-        if (hardwareID == "") {
-            String macAddress = "ESP32-" + String(ESP.getEfuseMac(), HEX);
-            char hardwareID[macAddress.length() + 1];
-            macAddress.toCharArray(hardwareID, macAddress.length() + 1);
-            strtoupper(hardwareID, hardwareID);
-        }
-        jsonDoc["id"] = hardwareID;
+        String macAddress = "ESP32-" + String(ESP.getEfuseMac(), HEX);
+        char hardwareID[macAddress.length() + 1];
+        macAddress.toCharArray(hardwareID, macAddress.length() + 1);
+        jsonDoc["id"] = strtoupper(hardwareID, hardwareID);
         jsonDoc["ready"] = !clientConnected && !gatewayConnected;
+        jsonDoc["server_ready"] = !gatewayConnected && clientConnected;
+        jsonDoc["client_ready"] = !clientConnected;
         
         // Serialize JSON object to a string
         String response;

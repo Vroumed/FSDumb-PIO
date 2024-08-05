@@ -63,24 +63,25 @@ void handleUnauthenticatedSocketMessage(void *arg, uint8_t *data, size_t len, As
         }
 
         int type = doc["type"];
+        std::string apiKey = doc["api_key"];
+        bool validated = strcmp(apiKey.c_str(), api_key.c_str());
+
+        if (!validated) {
+            client->text("no:unauthorized");
+            return;
+        }
+
         if (type == 0) { // client
             if (clientConnected) {
                 client->text("no:occupied");
                 return;
             }
-
-            std::string apiKey = doc["apiKey"];
-            if (strcmp(apiKey.c_str(), api_key.c_str()) != 0) {
-                clientCon = client;
-                client->text("ok");
-                WS2812_Set_Color(client_indicator, 0, 255, 0);
-                WS2812_Commit();
-                clientConnected = true;
-                Screen_Display_Text("Client connected");
-            }
-            else {
-                client->text("no:unauthorized");
-            }
+            clientCon = client;
+            client->text("ok");
+            WS2812_Set_Color(client_indicator, 0, 255, 0);
+            WS2812_Commit();
+            clientConnected = true;
+            Screen_Display_Text("Client connected");
             return;
         }
         else if (type == 1) { // gateway
@@ -93,19 +94,13 @@ void handleUnauthenticatedSocketMessage(void *arg, uint8_t *data, size_t len, As
                 client->text("no:occupied");
                 return;
             }
-
-            std::string apiKey = doc["data"]["apiKey"];
-            if (apiKey == api_key) {
-                gatewayCon = client;
-                client->text("ok");
-                WS2812_Set_Color(server_indicator, 0, 255, 0);
-                WS2812_Commit();
-                gatewayConnected = true;
-                Screen_Display_Text("Client & Gateway connected");
-            }
-            else {
-                client->text("no:unauthorized");
-            }
+            gatewayCon = client;
+            client->text("ok");
+            WS2812_Set_Color(server_indicator, 0, 255, 0);
+            WS2812_Commit();
+            gatewayConnected = true;
+            Screen_Display_Text("Client & Gateway connected");
+        
             return;
         }
     }
@@ -264,7 +259,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
     case WS_EVT_DISCONNECT:
         if (client == clientCon && clientConnected) {
             clientConnected = false;
-            WS2812_Set_Color(client_indicator, 0, 0, 0);
+            WS2812_Set_Color(client_indicator, 255, 128, 0);
             WS2812_Commit();
             server->closeAll(); // Kick all connected clients, client must be initiator   
             generateQRCode();  //Since the client is disconnected, we can generate a new QR code      
