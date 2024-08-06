@@ -207,7 +207,19 @@ void handleClientSocketMessage(void *arg, uint8_t *data, size_t len)
                 matrix.showStaticArray(matrixLeftArray, matrixRightArray);
             }
             break;
+        case 6:
+            {
+                JsonArray ledMatrix = doc["data"]["LedMatrix"];
 
+                if (ledMatrix.size() == 5) {
+                    WS2812_Set_Color(0, ledMatrix[0][0], ledMatrix[0][1], ledMatrix[0][2]);
+                    WS2812_Set_Color(3, ledMatrix[1][0], ledMatrix[1][1], ledMatrix[1][2]);
+                    WS2812_Set_Color(4, ledMatrix[2][0], ledMatrix[2][1], ledMatrix[2][2]);
+                    WS2812_Set_Color(5, ledMatrix[3][0], ledMatrix[3][1], ledMatrix[3][2]);
+                    WS2812_Set_Color(6, ledMatrix[4][0], ledMatrix[4][1], ledMatrix[4][2]);
+                    WS2812_Commit();
+                }
+            }
         default:
             break;
         }

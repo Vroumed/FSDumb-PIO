@@ -12,9 +12,16 @@ import time
 LED_MATRIX_WIDTH = 16
 LED_MATRIX_HEIGHT = 8
 
-uri = "ws://192.168.137.45/ws"
+uri = "ws://192.168.1.22/ws"
 rickroll.ws = websocket.WebSocket()
 rickroll.ws.connect(uri)
+
+rickroll.api_key = "KQCW0LVI"
+rickroll.ws.connect(uri)
+
+# authentification
+data = {"type": 0, "api_key": rickroll.api_key}
+rickroll.ws.send(json.dumps(data))
 
 def image_to_led_matrices(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

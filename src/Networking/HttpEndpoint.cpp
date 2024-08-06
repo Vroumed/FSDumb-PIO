@@ -2,6 +2,10 @@
 #include <ArduinoJson.h>
 #include "WebsocketHandler.h"
 #include <esp_camera.h>
+#include <Sensors/TrackSensor.h>
+#include <Sensors/PhotosensitiveSensor.H>
+#include <Sensors/BatteryIndicator.h>
+#include <Sensors/UltrasonicSensor.h>
 
 #define ROVER_NAME "Bertinette"
 #define STREAM_CONTENT_BOUNDARY "123456789000000000000987654321"
@@ -69,7 +73,9 @@ void HTTPServer_setup() {
         serializeJson(jsonDoc, response);
 
         // Send the response
-        request->send(200, "application/json", response);
+        AsyncWebServerResponse *responseReq = request->beginResponse(200, "application/json", response);
+        responseReq->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(responseReq);
     });
 
     server.on("/camera", HTTP_GET, [] (AsyncWebServerRequest *request) {
@@ -81,9 +87,83 @@ void HTTPServer_setup() {
             return;
         }
         AsyncResponseStream *response = request->beginResponseStream("image/jpeg");
+        response->addHeader("Content-Disposition", "inline; filename=capture.jpg"); 
+        response->addHeader("Access-Control-Allow-Origin", "*");
         response->write(pic->buf, pic->len);
         esp_camera_fb_return(pic);
         request->send(response);
+    });
+
+    Light_Setup();
+    Track_Setup();
+    Ultrasonic_Setup();
+
+    server.on("/sensor/all", HTTP_GET, [](AsyncWebServerRequest *request) {
+        // Créer un objet JSON
+        JsonDocument jsonDoc;
+
+        // Lire les données de tous les capteurs
+        jsonDoc["battery_voltage"] = readBatteryVoltage();
+        jsonDoc["photosensitive"] = Get_Photosensitive();
+        Track_Read();
+        jsonDoc["track_left"] = sensorValue[0];
+        jsonDoc["track_middle"] = sensorValue[1];
+        jsonDoc["track_right"] = sensorValue[2];
+        jsonDoc["ultrasonic_distance"] = Get_Sonar();
+
+        // Envoyer la réponse JSON
+        String response;
+        serializeJson(jsonDoc, response);
+            AsyncWebServerResponse *responseReq = request->beginResponse(200, "application/json", response);
+        responseReq->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(responseReq);
+    });
+
+    server.on("/sensor/battery", HTTP_GET, [](AsyncWebServerRequest *request) {
+        JsonDocument jsonDoc;
+        jsonDoc["battery_voltage"] = readBatteryVoltage();
+
+        String response;
+        serializeJson(jsonDoc, response);
+        AsyncWebServerResponse *responseReq = request->beginResponse(200, "application/json", response);
+        responseReq->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(responseReq);
+    });
+
+    server.on("/sensor/light", HTTP_GET, [](AsyncWebServerRequest *request) {
+        JsonDocument jsonDoc;
+        jsonDoc["photosensitive"] = Get_Photosensitive();
+
+        String response;
+        serializeJson(jsonDoc, response);
+        AsyncWebServerResponse *responseReq = request->beginResponse(200, "application/json", response);
+        responseReq->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(responseReq);
+    });
+
+    server.on("/sensor/track", HTTP_GET, [](AsyncWebServerRequest *request) {
+        JsonDocument jsonDoc;
+        Track_Read();
+        jsonDoc["track_left"] = sensorValue[0];
+        jsonDoc["track_middle"] = sensorValue[1];
+        jsonDoc["track_right"] = sensorValue[2];
+
+        String response;
+        serializeJson(jsonDoc, response);
+        AsyncWebServerResponse *responseReq = request->beginResponse(200, "application/json", response);
+        responseReq->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(responseReq);
+    });
+
+    server.on("/sensor/sonar", HTTP_GET, [](AsyncWebServerRequest *request) {
+        JsonDocument jsonDoc;
+        jsonDoc["distance"] = Get_Sonar();
+
+        String response;
+        serializeJson(jsonDoc, response);
+        AsyncWebServerResponse *responseReq = request->beginResponse(200, "application/json", response);
+        responseReq->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(responseReq);
     });
 
     xTaskCreateUniversal(loopTask_Camera, "loopTask_Camera", 8192, NULL, 0, NULL, 0);

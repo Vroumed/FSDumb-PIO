@@ -12,9 +12,6 @@ rickroll.ws.connect(uri)
 
 # authentification
 data = {"type": 0, "api_key": rickroll.api_key}
-print(json.dumps(data))
-exit()
-
 rickroll.ws.send(json.dumps(data))
 
-rickroll.main('urss.mid')
+rickroll.main('castle.mid')

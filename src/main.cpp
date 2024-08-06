@@ -9,6 +9,7 @@
 #include "IR/IRReceiver.h"
 #include "Networking/HttpEndpoint.h"
 #include "Networking/CameraHandler.h"
+#include "Sensors/UltrasonicSensor.h"
 
 void setup()
 {
