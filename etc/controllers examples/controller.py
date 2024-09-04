@@ -16,9 +16,13 @@ is_running = True
 # create an instance, use fiŕst available device
 controller = DualSenseController()
 
-uri = "ws://172.20.10.4/ws"
+uri = "ws://192.168.1.22/ws"
+api_key = "KQCW0LVI"
 ws = websocket.WebSocket()
 ws.connect(uri)
+
+data = {"type": 0, "api_key": api_key}
+ws.send(json.dumps(data))
 
 
 

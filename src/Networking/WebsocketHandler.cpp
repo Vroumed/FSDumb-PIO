@@ -8,6 +8,10 @@
 #include <Esp.h>
 #include "WifiHandler.h"
 #include <Display/Screen.h>
+#include <Sensors/BatteryIndicator.h>
+#include <Sensors/PhotosensitiveSensor.H>
+#include <Sensors/TrackSensor.h>
+#include <Sensors/UltrasonicSensor.h>
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws"); // Changez le nom de ce point d'accès pour "sécuriser" l'accès à votre voiture
@@ -20,8 +24,52 @@ AsyncWebSocketClient *gatewayCon;
 
 bool autoMode = false;
 
+float speed = 0;
+float direction = 0;
+float headX = 0;
+
+int thrust = 0;
+
 float mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+void loopTaskGateway(void *pvParameters) {
+    while (gatewayConnected) {
+        ulong startTime = millis();
+        JsonDocument jsonDoc;
+
+        // Lire les données de tous les capteurs
+        jsonDoc["battery_voltage"] = readBatteryVoltage();
+        jsonDoc["photosensitive"] = Get_Photosensitive();
+        Track_Read();
+        jsonDoc["track_left"] = sensorValue[0];
+        jsonDoc["track_middle"] = sensorValue[1];
+        jsonDoc["track_right"] = sensorValue[2];
+        jsonDoc["ultrasonic_distance"] = Get_Sonar();
+        jsonDoc["speed"] = speed;
+        jsonDoc["direction"] = direction;
+        jsonDoc["headX"] = headX;
+        jsonDoc["thrust"] = thrust;
+
+        // Envoyer la réponse JSON
+        String response;
+        serializeJson(jsonDoc, response);
+        gatewayCon->text(response);
+
+        ulong endTime = millis();
+        ulong elapsedTime = endTime - startTime;
+
+        float waitTime = autoMode ? 75 : 250;
+        // on auto mode, we need to send data more frequently so the server can "see" the car
+
+        if (elapsedTime < 250) {
+            delay(250 - elapsedTime);
+        }
+        else {
+            delay(50); // avoid bloating the CPU
+        }
+    }
 }
 
 void LogErrorToTerminals(const char* message, const char* header = "Error") {
@@ -81,7 +129,7 @@ void handleUnauthenticatedSocketMessage(void *arg, uint8_t *data, size_t len, As
             WS2812_Set_Color(client_indicator, 0, 255, 0);
             WS2812_Commit();
             clientConnected = true;
-            Screen_Display_Text("Client connected");
+            Screen_Display_Text("[C] Ready (Manual)");
             return;
         }
         else if (type == 1) { // gateway
@@ -99,7 +147,8 @@ void handleUnauthenticatedSocketMessage(void *arg, uint8_t *data, size_t len, As
             WS2812_Set_Color(server_indicator, 0, 255, 0);
             WS2812_Commit();
             gatewayConnected = true;
-            Screen_Display_Text("Client & Gateway connected");
+            Screen_Display_Text("[C+G] Ready (Manual)");
+            xTaskCreateUniversal(loopTaskGateway, "loopTaskGateway", 8192, NULL, 0, NULL, 0);
         
             return;
         }
@@ -132,23 +181,54 @@ void handleClientSocketMessage(void *arg, uint8_t *data, size_t len)
 
         int cmd = doc["cmd"];
 
+        if (cmd == 0) {
+            // signal sent by client to indicate to engage or disengage auto mode
+            autoMode = doc["data"]["auto"] == 1;
+            gatewayCon->text("auto:" + String(autoMode));
+            if (autoMode) {
+                if (!gatewayConnected) {
+                    autoMode = false;
+                    LogErrorToTerminals("Gateway is not connected, cannot engage auto mode");
+                    Buzzer_Variable(true);
+                    Screen_Display_Text("[C] auto mode failed");
+                    delay(100);
+                    Buzzer_Variable(false);
+                    delay(1000);
+                    Screen_Display_Text("[C] Ready (Manual)");
+                    return;
+                }
+                
+                Screen_Display_Text("[C+G] Ready (Auto)");
+            }
+            else {
+                Buzzer_Variable(false);
+                Screen_Display_Text("[C+G] Ready (Manual)");
+            }
+            return;
+        }
+
         switch (cmd)
         {
         case 1:
             {
-                float direction = doc["data"]["direction"];
-                float speed = doc["data"]["speed"];
-                int thrust = doc["data"]["thrust"];
+                float _direction = doc["data"]["direction"];
+                float _speed = doc["data"]["speed"];
+                int _thrust = doc["data"]["thrust"];
 
                 // Convert direction from -1 to 1 to 45 to 135
-                int adaptedDirection = mapFloat(direction, -1, 1, 45, 135);
+                int adaptedDirection = mapFloat(_direction, -1, 1, 45, 135);
 
                 // Calcul des vitesses des roues
-                float absDirection = std::abs(direction);
+                float absDirection = std::abs(_direction);
 
                 // Convertir les vitesses en pourcentage (0 à 100)
-                int adaptedSpeedInner = mapFloat(speed - (absDirection/2), 0, 1, 0, 100);
-                int adaptedSpeedOuter = mapFloat(speed, 0, 1, 0, 100);
+                int adaptedSpeedInner = mapFloat(_speed - (absDirection/2), 0, 1, 0, 100);
+                int adaptedSpeedOuter = mapFloat(_speed, 0, 1, 0, 100);
+
+                speed = _speed;
+                direction = _direction;
+                thrust = _thrust;
+
 
                 ServoDirection(adaptedDirection);
                 if (direction < 0 ) {
@@ -159,20 +239,20 @@ void handleClientSocketMessage(void *arg, uint8_t *data, size_t len)
                     Motor(1, thrust, adaptedSpeedInner);
                     Motor(2, thrust, adaptedSpeedOuter);
                 }
-                
             }
             break;
         
         case 2:
             {
-                float headX = doc["data"]["headX"];
+                float _headX = doc["data"]["headX"];
                 float headY = doc["data"]["headY"];
 
-                headX = mapFloat(headX, -1, 1, 0, 180);
+                _headX = mapFloat(_headX, -1, 1, 0, 180);
                 headY = mapFloat(headY, -1, 1, 65, 130);
 
-                ServoHeadX(headX);
+                ServoHeadX(_headX);
                 ServoHeadY(headY);
+                headX = _headX;
             }
             break;
 
